@@ -1,24 +1,18 @@
-from django.http import Http404
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
 from rest_framework import viewsets
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
 from homes.models import House, Room, Thermostat, Light
 from homes.serializers import HouseSerializer, RoomSerializer, ThermostatSerializer, LightSerializer
 
-
+@method_decorator(login_required, name='dispatch')
 class HouseList(ListCreateAPIView):
     queryset = House.objects.all()
     serializer_class = HouseSerializer
 
-
+@method_decorator(login_required, name='dispatch')
 class HouseDetail(RetrieveUpdateDestroyAPIView):
-
-    def get_object(self, pk):
-        try:
-            return House.objects.get(name=pk)
-        except:
-            raise Http404
-
     queryset = House.objects.all()
     serializer_class = HouseSerializer
     _lookup_field = 'name'
