@@ -5,7 +5,7 @@ from homes import views
 
 urlpatterns = [
     path('house/', views.HouseList.as_view()),
-    path('house/<str:pk>', views.HouseDetail.as_view())
+    path('house/<int:pk>', views.HouseDetail.as_view())
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

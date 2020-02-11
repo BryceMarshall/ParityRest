@@ -15,7 +15,6 @@ class HouseList(ListCreateAPIView):
 class HouseDetail(RetrieveUpdateDestroyAPIView):
     queryset = House.objects.all()
     serializer_class = HouseSerializer
-    _lookup_field = 'name'
 
 
 class RoomViewSet(viewsets.ModelViewSet):
