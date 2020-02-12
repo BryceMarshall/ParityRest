@@ -132,13 +132,14 @@ class rest_test(APITestCase):
 
     def test_detail_update_house(self):
         self.test_create_view_house()
-        response = self.client.get(reverse('house_detail', args=[1]))
+        response = self.get('house_detail', args=[1])
+
         self.assertEquals(response.status_code, status.HTTP_200_OK)
         self.assertEquals(response.data, {'id': 1, 'name': 'house1', 'rooms': []})
 
-        response = self.client.put(reverse('house_detail', args=[1]),
-                                   data=json.dumps({"name": "updatedHouse", 'rooms': []}),
-                                   content_type="application/json")
+        response = self.put('house_detail', args=[1],
+                            data={"name": "updatedHouse", 'rooms': []}, )
+
         self.assertEquals(response.status_code, status.HTTP_200_OK)
         self.assertEquals(response.data, {'id': 1, 'name': 'updatedHouse', 'rooms': []})
 
@@ -150,7 +151,7 @@ class rest_test(APITestCase):
     def test_create_view_room(self):
         house = HouseFactory()
 
-        response = self.post('room_list', {'name':'room1','house':house.id, 'current_temperature':25})
+        response = self.post('room_list', {'name': 'room1', 'house': house.id, 'current_temperature': 25})
         self.assertEquals(response.status_code, status.HTTP_201_CREATED)
 
         response = self.get('room_list')
@@ -160,21 +161,23 @@ class rest_test(APITestCase):
         self.test_create_view_room()
         house = HouseFactory()
 
-        response = self.client.put(reverse('room_detail', args=[1]),
-                                   data=json.dumps({'house':house.id, "name": "updatedRoom", 'current_temperature':27}),
-                                   content_type="application/json")
+        response = self.put('room_detail', args=[1],
+                            data={'house': house.id, "name": "updatedRoom", 'current_temperature': 27})
+
         self.assertEquals(response.status_code, status.HTTP_200_OK)
-        self.assertEquals(response.data, {'id': 1, 'house':house.id, 'name': 'updatedRoom', 'current_temperature':'27.00'})
+        self.assertEquals(response.data,
+                          {'id': 1, 'house': house.id, 'name': 'updatedRoom', 'current_temperature': '27.00'})
 
     def test_delete_room(self):
         self.test_create_view_room()
+
         response = self.client.delete(reverse('room_detail', args=[1]))
         self.assertEquals(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_create_view_light(self):
         room = RoomFactory()
 
-        response = self.post('light_list', {'name':'light1','room':room.id, 'state':'off'})
+        response = self.post('light_list', {'name': 'light1', 'room': room.id, 'state': 'off'})
         self.assertEquals(response.status_code, status.HTTP_201_CREATED)
 
         response = self.get('light_list')
@@ -184,29 +187,53 @@ class rest_test(APITestCase):
         self.test_create_view_light()
         room = RoomFactory()
 
-        response = self.client.put(reverse('light_detail', args=[1]),
-                                   data=json.dumps({'room':room.id, "name": "light1", 'state':'on'}),
-                                   content_type="application/json")
+        response = self.put('light_detail', args=[1],
+                            data={'room': room.id, "name": "light1", 'state': 'on'})
         self.assertEquals(response.status_code, status.HTTP_200_OK)
-        self.assertEquals(response.data, {'id': 1, 'room':room.id, "name": "light1", 'state':'on'})
+        self.assertEquals(response.data, {'id': 1, 'room': room.id, "name": "light1", 'state': 'on'})
 
     def test_delete_light(self):
         self.test_create_view_light()
         response = self.client.delete(reverse('light_detail', args=[1]))
         self.assertEquals(response.status_code, status.HTTP_204_NO_CONTENT)
 
+    def test_create_view_thermostat(self):
+        house = HouseFactory()
 
+        response = self.post('thermostat_list',
+                             {'name': 'thermostat1', 'house': house.id, 'mode': 'off', 'current_temperature': 25,
+                              'temperature_set_point': 28})
+        self.assertEquals(response.status_code, status.HTTP_201_CREATED)
 
-    def post(self, url, payload):
-        return self.client.post(reverse(url), data=json.dumps(payload),
+        response = self.get('thermostat_list')
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+
+    def test_update_thermostat(self):
+        self.test_create_view_thermostat()
+        house = HouseFactory()
+
+        response = self.put('thermostat_detail', args=[1],
+                            data={'name': 'thermostat1', 'house': house.id, 'mode': 'fan',
+                                  'current_temperature': 22, 'temperature_set_point': 24})
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEquals(response.data, {'id': 1, 'name': 'thermostat1', 'house': house.id, 'mode': 'fan',
+                                          'current_temperature': '22.00', 'temperature_set_point': '24.00'})
+
+    def test_delete_thermostat(self):
+        self.test_create_view_thermostat()
+        response = self.client.delete(reverse('thermostat_detail', args=[1]))
+        self.assertEquals(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def post(self, path, data):
+        return self.client.post(reverse(path), data=json.dumps(data),
                                 content_type="application/json")
 
-    def put(self, url, payload, kwargs):
-        return self.client.put(reverse(url), data=json.dumps(payload),
-                               content_type="application/json", kwargs=kwargs)
+    def put(self, path, data, args):
+        return self.client.put(reverse(path, args=args), data=json.dumps(data),
+                               content_type="application/json")
 
-    def get(self, url, payload=None):
-        return self.client.get(reverse(url, kwargs=payload))
+    def get(self, path, args=None):
+        return self.client.get(reverse(path, args=args))
 
 
 def get_latest_observation(observationModel, key):
