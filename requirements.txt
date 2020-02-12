@@ -2,3 +2,4 @@ djangorestframework
 Django==2.1.15
 django-authtools==1.6.0
 django-model-utils==3.1.2
+psycopg2

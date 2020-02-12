@@ -3,12 +3,13 @@ import json
 from authtools.models import User
 from django.test import TestCase
 from django.urls import reverse
-from rest_framework.test import APIClient
+from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
 
 from homes.models import House, Room, RoomState, Light, LightState, Thermostat, ThermostatState
 
 
-class model_test(TestCase):
+class signal_test(TestCase):
 
     def setUp(self) -> None:
         self.house = House(name='house1')
@@ -105,7 +106,7 @@ class model_test(TestCase):
         assert len(ThermostatState.objects.all()) == observation_count
 
 
-class rest_test(TestCase):
+class rest_test(APITestCase):
 
     # Create a house
     # Create two rooms
@@ -117,19 +118,29 @@ class rest_test(TestCase):
 
     def setUp(self) -> None:
         User.objects.create_user(name='testuser', email='testuser@example.com', password='testuser')
-        self.client = APIClient()
         assert self.client.login(username='testuser@example.com', password='testuser')
 
-        response = self.client.post(reverse('house_list'), data=json.dumps({'name': 'house1', 'rooms': []}),
-                                    content_type="application/json")
-        assert response.status_code == 201
 
-    def test_house(self):
-        response = self.client.get(reverse('house_list'))
-        assert response.status_code == 200
-        results = json.loads(response.content)['results']
-        assert len(results) == 1
-        assert results[0]['name'] == "house1"
+
+    def test_create_house(self):
+        response = self.post('house_list', {'name': 'house1', 'rooms': []})
+        self.assertEquals(response.status_code, status.HTTP_201_CREATED)
+
+    def test_detail_update_house(self):
+        self.test_create_house()
+        response = self.client.get(reverse('house_detail', args=[1]))
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEquals(response.data, {'id': 1, 'name': 'house1', 'rooms': []})
+
+        response = self.client.put(reverse('house_detail', args=[1]), data=json.dumps({"name":"updatedHouse", 'rooms':[]}), content_type="application/json")
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEquals(response.data, {'id': 1, 'name': 'updatedHouse', 'rooms': []})
+
+    def test_delete_house(self):
+        self.test_create_house()
+        response = self.client.delete(reverse('house_detail', args=[1]))
+        self.assertEquals(response.status_code, status.HTTP_204_NO_CONTENT)
+
 
 
 def get_latest_observation(observationModel, key):
