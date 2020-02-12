@@ -1,5 +1,7 @@
 from django.db import models
-from model_utils import Choices
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+from model_utils import Choices, FieldTracker
 
 
 class NameBaseModel(models.Model):
@@ -51,6 +53,7 @@ class Thermostat(ThermostatData):
     Store thermostat data.
     """
     house = models.ForeignKey(House, related_name='thermostats', on_delete=models.CASCADE, help_text='Related house.')
+    tracker = FieldTracker()
 
     def __str__(self):
         return self.name
@@ -83,6 +86,8 @@ class Room(RoomData):
     """
     house = models.ForeignKey(House, related_name='rooms', on_delete=models.CASCADE, help_text='Related house.')
 
+    tracker = FieldTracker()
+
 
 class RoomState(RoomData):
     timestamp = models.DateTimeField(auto_now=True, auto_created=True)
@@ -109,6 +114,7 @@ class Light(LightData):
     Store room information.
     """
     room = models.ForeignKey(Room, related_name='lights', on_delete=models.CASCADE, help_text='Related room.')
+    tracker = FieldTracker()
 
 
 class LightState(LightData):
@@ -116,3 +122,29 @@ class LightState(LightData):
 
     def __str__(self):
         return "{} - {} - {}".format(self.name, self.state, self.timestamp)
+
+
+@receiver(pre_save, sender=Thermostat)
+def pre_save_thermo(**kwargs):
+    instance = kwargs['instance']
+    if instance.tracker.changed():
+        observation = ThermostatState(current_temperature=instance.current_temperature,
+                                      temperature_set_point=instance.temperature_set_point, mode=instance.mode,
+                                      name=instance.name)
+        observation.save()
+
+
+@receiver(pre_save, sender=Light)
+def pre_save_light(**kwargs):
+    instance = kwargs['instance']
+    if instance.tracker.changed():
+        observation = LightState(state=instance.state, name=instance.name)
+        observation.save()
+
+
+@receiver(pre_save, sender=Room)
+def pre_save_room(**kwargs):
+    instance = kwargs['instance']
+    if instance.tracker.changed():
+        observation = RoomState(current_temperature=instance.current_temperature, name=instance.name)
+        observation.save()
