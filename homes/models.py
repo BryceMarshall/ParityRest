@@ -126,25 +126,22 @@ class LightState(LightData):
 
 @receiver(pre_save, sender=Thermostat)
 def pre_save_thermo(**kwargs):
-    instance = kwargs['instance']
-    if instance.tracker.changed():
-        observation = ThermostatState(current_temperature=instance.current_temperature,
-                                      temperature_set_point=instance.temperature_set_point, mode=instance.mode,
-                                      name=instance.name)
-        observation.save()
+    pre_save_helper(ThermostatState, ("current_temperature", "temperature_set_point", "mode", "name"), **kwargs)
 
 
 @receiver(pre_save, sender=Light)
 def pre_save_light(**kwargs):
-    instance = kwargs['instance']
-    if instance.tracker.changed():
-        observation = LightState(state=instance.state, name=instance.name)
-        observation.save()
+    pre_save_helper(LightState, ("state", "name"), **kwargs)
 
 
 @receiver(pre_save, sender=Room)
 def pre_save_room(**kwargs):
+    pre_save_helper(RoomState, ("current_temperature", "name"), **kwargs)
+
+
+def pre_save_helper(observation_model, fields, **kwargs):
     instance = kwargs['instance']
     if instance.tracker.changed():
-        observation = RoomState(current_temperature=instance.current_temperature, name=instance.name)
+        observation_fields = {field: getattr(instance, field) for field in fields}
+        observation = observation_model(**observation_fields)
         observation.save()
