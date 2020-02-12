@@ -4,7 +4,7 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from homes import views
 
 urlpatterns = [
-    path('house/', views.HouseList.as_view()),
+    path('house/', views.HouseList.as_view(), name='house_list'),
     path('house/<int:pk>', views.HouseDetail.as_view()),
     path('room/', views.RoomList.as_view()),
     path('room/<int:pk>', views.RoomDetail.as_view()),
