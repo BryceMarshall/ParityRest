@@ -125,7 +125,7 @@ class LightState(LightData):
 
 
 @receiver(pre_save, sender=Thermostat)
-def pre_save_thermo(**kwargs):
+def pre_save_thermostat(**kwargs):
     pre_save_helper(ThermostatState, ("current_temperature", "temperature_set_point", "mode", "name"), **kwargs)
 
 
