@@ -1,11 +1,13 @@
 import json
+from collections import OrderedDict
 
 from authtools.models import User
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
+from rest_framework.test import APITestCase
 
+from homes.factories import HouseFactory, RoomFactory
 from homes.models import House, Room, RoomState, Light, LightState, Thermostat, ThermostatState
 
 
@@ -120,27 +122,91 @@ class rest_test(APITestCase):
         User.objects.create_user(name='testuser', email='testuser@example.com', password='testuser')
         assert self.client.login(username='testuser@example.com', password='testuser')
 
-
-
-    def test_create_house(self):
+    def test_create_view_house(self):
         response = self.post('house_list', {'name': 'house1', 'rooms': []})
         self.assertEquals(response.status_code, status.HTTP_201_CREATED)
 
+        response = self.get('house_list')
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEquals(response.data['results'], [OrderedDict([('id', 1), ('name', 'house1'), ('rooms', [])])])
+
     def test_detail_update_house(self):
-        self.test_create_house()
+        self.test_create_view_house()
         response = self.client.get(reverse('house_detail', args=[1]))
         self.assertEquals(response.status_code, status.HTTP_200_OK)
         self.assertEquals(response.data, {'id': 1, 'name': 'house1', 'rooms': []})
 
-        response = self.client.put(reverse('house_detail', args=[1]), data=json.dumps({"name":"updatedHouse", 'rooms':[]}), content_type="application/json")
+        response = self.client.put(reverse('house_detail', args=[1]),
+                                   data=json.dumps({"name": "updatedHouse", 'rooms': []}),
+                                   content_type="application/json")
         self.assertEquals(response.status_code, status.HTTP_200_OK)
         self.assertEquals(response.data, {'id': 1, 'name': 'updatedHouse', 'rooms': []})
 
     def test_delete_house(self):
-        self.test_create_house()
+        self.test_create_view_house()
         response = self.client.delete(reverse('house_detail', args=[1]))
         self.assertEquals(response.status_code, status.HTTP_204_NO_CONTENT)
 
+    def test_create_view_room(self):
+        house = HouseFactory()
+
+        response = self.post('room_list', {'name':'room1','house':house.id, 'current_temperature':25})
+        self.assertEquals(response.status_code, status.HTTP_201_CREATED)
+
+        response = self.get('room_list')
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+
+    def test_update_room(self):
+        self.test_create_view_room()
+        house = HouseFactory()
+
+        response = self.client.put(reverse('room_detail', args=[1]),
+                                   data=json.dumps({'house':house.id, "name": "updatedRoom", 'current_temperature':27}),
+                                   content_type="application/json")
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEquals(response.data, {'id': 1, 'house':house.id, 'name': 'updatedRoom', 'current_temperature':'27.00'})
+
+    def test_delete_room(self):
+        self.test_create_view_room()
+        response = self.client.delete(reverse('room_detail', args=[1]))
+        self.assertEquals(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_create_view_light(self):
+        room = RoomFactory()
+
+        response = self.post('light_list', {'name':'light1','room':room.id, 'state':'off'})
+        self.assertEquals(response.status_code, status.HTTP_201_CREATED)
+
+        response = self.get('light_list')
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+
+    def test_update_light(self):
+        self.test_create_view_light()
+        room = RoomFactory()
+
+        response = self.client.put(reverse('light_detail', args=[1]),
+                                   data=json.dumps({'room':room.id, "name": "light1", 'state':'on'}),
+                                   content_type="application/json")
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEquals(response.data, {'id': 1, 'room':room.id, "name": "light1", 'state':'on'})
+
+    def test_delete_light(self):
+        self.test_create_view_light()
+        response = self.client.delete(reverse('light_detail', args=[1]))
+        self.assertEquals(response.status_code, status.HTTP_204_NO_CONTENT)
+
+
+
+    def post(self, url, payload):
+        return self.client.post(reverse(url), data=json.dumps(payload),
+                                content_type="application/json")
+
+    def put(self, url, payload, kwargs):
+        return self.client.put(reverse(url), data=json.dumps(payload),
+                               content_type="application/json", kwargs=kwargs)
+
+    def get(self, url, payload=None):
+        return self.client.get(reverse(url, kwargs=payload))
 
 
 def get_latest_observation(observationModel, key):
